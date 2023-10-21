@@ -50,7 +50,7 @@ class MailService
     public function send(string $email, string $subject, string $body): bool
     {
         $sent = $this->mailProvider::to($email)->send(new SendUserMail($subject, $body));
-        if (!$sent) {
+        if (! $sent) {
             \Log::error("Mail(App\Mail\SendUserMail) not sent for {$email}");
             return false;
         }
