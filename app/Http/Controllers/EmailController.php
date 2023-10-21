@@ -2,30 +2,48 @@
 
 namespace App\Http\Controllers;
 
-use App\Utilities\Contracts\ElasticsearchHelperInterface;
-use App\Utilities\Contracts\RedisHelperInterface;
+use App\Http\Requests\SendMailRequest;
+use App\Http\Resources\EmailsResource;
+use App\Models\User;
+use App\Services\MailService;
+use Illuminate\Http\JsonResponse;
 
 class EmailController extends Controller
 {
-    // TODO: finish implementing send method
-    public function send()
+    private MailService $mailService;
+
+    public function __construct(MailService $mailService)
     {
-
-
-        /** @var ElasticsearchHelperInterface $elasticsearchHelper */
-        $elasticsearchHelper = app()->make(ElasticsearchHelperInterface::class);
-        // TODO: Create implementation for storeEmail and uncomment the following line
-        // $elasticsearchHelper->storeEmail(...);
-
-        /** @var RedisHelperInterface $redisHelper */
-        $redisHelper = app()->make(RedisHelperInterface::class);
-        // TODO: Create implementation for storeRecentMessage and uncomment the following line
-        // $redisHelper->storeRecentMessage(...);
+        $this->mailService = $mailService;
     }
 
-    //  TODO - BONUS: implement list method
-    public function list()
+    /**
+     * Send mail to user
+     *
+     * @param User $user
+     *
+     * @return JsonResponse
+     */
+    public function send(User $user, SendMailRequest $request): JsonResponse
     {
+        $emails = $request->safe()->only('emails')['emails'];
+        $success = $this->mailService->sendBatch($emails);
+        if ($success) {
+            $storedEmails = $this->mailService->storeInElasticsearch($emails);
+            $this->mailService->storeInRedisRecentMessages($storedEmails);
+            return response()->json(['message' => __('mail.send')], 200);
+        }
+        return response()->json(['message' => __('mail.send_failed')], 400);
+    }
 
+    /**
+     * Resturn a list with all emails sent
+     *
+     * @return void
+     */
+    public function list(): EmailsResource
+    {
+        $emails = $this->mailService->getAllEmailsSent();
+        return new EmailsResource($emails);
     }
 }

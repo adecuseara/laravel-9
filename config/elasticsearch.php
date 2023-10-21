@@ -13,6 +13,8 @@ return [
 
     'defaultConnection' => 'default',
 
+    'index' =>  env('INDEX', 'emails'),
+
     /**
      * These are the connection parameters used when building a client.
      */
